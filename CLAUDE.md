@@ -25,12 +25,13 @@ Goal of the demo: show that (1) embeddings stay meaningful after travelling thro
 
 ## Current state
 
-Working (on the server, to be re-created locally first): 2 workers via Docker Compose. Worker A has a
-Generator source, sends data `downstream` to Worker B, and B writes `/output/results.csv`. Verified
-that data really travels A → B (only B has the output volume mounted, and changing the query changed
-the output).
-
-**First task locally:** reproduce this 2-worker setup on the Mac before building anything new.
+- **Done (2026-11-09):** 2-worker setup (worker-a1 → worker-b) reproduced locally on the Mac
+  (commit `1c5907d`). `nes-cli dump` confirms the plan is split across both workers; all rows
+  arrive in order. A1 mounts `./data:/data:ro`, only B mounts `./output`.
+- **Done:** schema width tests with random unit vectors, see `experiments/schema_width/*.log`.
+  Transport works up to 256 dims; a single-expression SQL dot product only up to 64 (details below).
+- **Next:** `scripts/embed.py` (sentence-transformers, PCA → 32 dims; dataset not decided yet,
+  AG News proposed) and a File source on A1.
 
 ## Target architecture (v1 demo)
 
@@ -69,11 +70,17 @@ Generate files that repeat per worker with `gen_topology.py`. Never hand-write N
 
 - `nebulastream/nes-worker` and `nebulastream/nes-cli` are published for **linux/arm64**, so they run
   natively on Apple Silicon (no emulation). Don't add `platform: linux/amd64`.
-- `:latest` is rebuilt very often (sometimes daily). **Pin one version** in `compose.yaml` (a dated tag
-  or an image digest) once the 2-worker setup works, so the Mac and the server run the same build.
+- `:latest` is rebuilt very often (sometimes daily). Images are **pinned by multi-arch digest** in
+  `compose.yaml` (nightly of 2026-11-09). The same digest resolves to arm64 on the Mac and x64 on
+  the server. Don't switch back to `:latest`; re-pin deliberately and re-run the tests if upgrading.
 - Docker Desktop resource limits: give it at least 8 GB RAM and 6+ CPUs (Settings → Resources).
 - Develop with 2–3 workers. Scale to 10 only after the pipeline works end to end.
 - If a container dies with no clear error, check `docker stats` and the Docker Desktop memory limit.
+  Measured: ~210–300 MiB per idle worker (Docker Desktop limit is ~8 GB).
+- Parallel experiments: give each its own compose project (`docker compose -p <name>`) and its own
+  `data/`/`output/`, or they overwrite each other's containers and results.
+- `docker compose logs` keeps output from before a `restart`; use `--since 3m` (a duration, not a
+  clock time) to see only the latest run.
 
 ## NebulaStream facts learned so far (trust these over guesses)
 
@@ -107,15 +114,49 @@ Ignore the `nebulastream-tutorial` repo, which is outdated (old coordinator/UI a
 - YAML error "invalid node; ... map iterator as a sequence iterator" usually means a key the parser
   expected is missing, or the wrong file is mounted. It's not necessarily a syntax error.
 - The docs mention ML model inference inside queries (FLOAT32 tensor inputs). Not for v1, but note it.
+  The topology file takes a `models:` section (ONNX path + input/output fields) used by
+  `MODEL_INFERENCE(name, ...)`. Candidate fix for the expression-depth limit below.
+
+### Verified locally (2026-11-09, pinned build)
+
+- **File source:** `type: File`, `parser_config: {type: CSV, field_delimiter: ","}`,
+  `source_config: {file_path: /data/x.csv}`. The CSV has **no header line**. The File sink writes a
+  header like `NAME:TYPE:NOT_NULLABLE`; strip the `:TYPE...` suffix when reading it.
+- **Width:** 32/64/128/256 FLOAT32 embedding columns (+ WORKER_ID, TS) all arrive at B
+  bit-identical, 1000/1000 rows. Wide schemas are not the problem.
+- **Expression depth limit:** one SQL dot product `EMB_0*FLOAT32(r0) + ... ` compiles with 32 and 64
+  terms (error ~5e-7, float32 rounding) but **fails with 128 and 256 terms**: `Stack is too deep ...
+  recursive control-flow, which is not supported in Nautilus code`. The limit is between 64 and 128
+  terms, and it is about the expression, not the number of columns. Untested fixes: partial sums,
+  `MODEL_INFERENCE`. For v1 keep ≤ 64 dims (32 planned).
+- **Failures are silent:** `nes-cli start` returns a query id and exits 0 even if the query later
+  fails to compile on a worker. B then writes a header-only `results.csv`. **Always check row
+  counts** (and worker logs for `[E] QueryEngine ... Query Failed`).
+- **Operator placement is bottom-up** (the only built-in strategy): operators run as close to the
+  source as possible, so by default the score is computed on **A**, not B. Setting
+  `max_operators: 0` on the A-workers forces everything between source and sink onto B (sources and
+  sinks are pinned by `host:` and don't count). Check placement with `nes-cli ... dump` →
+  "Decomposed Plans". Plain column selections are optimised away entirely.
+- **Inspecting/feeding the CLI:** `docker compose run --rm -T nes-cli -t - dump < topo.yaml` (or
+  `start`) reads a topology from stdin. `dump` truncates long field lists.
+- **CLI state:** `status`/`stop` need the query-id mapping in `/state`, kept in the named volume
+  `nes-cli-state`. Without it, `--rm` containers lose it ("Could not find query with id").
+- B's sink file can lag slightly behind the query reporting `Stopped`; re-check before counting rows.
+- Benign log noise: a few `Channel ... was rejected` / `max_delay ... reached` warnings at startup,
+  and `[E] SpanningTupleBufferState ... validateFinalState` / `~SequenceShredder` lines on the source
+  worker **after** the stream ends. Data is complete despite them.
+- After failed 256-term compiles, worker-b grew to ~900 MiB (from ~300). Possibly a leak on failed
+  compilation; not investigated. Restart workers after failed queries.
 
 ## Scope rules for this week (demo on Friday)
 
-- Embedding dims: reduce to **16–32** (PCA or a model whose embeddings can be truncated). Wide
-  schemas are the biggest NebulaStream risk.
+- Embedding dims: reduce to **16–32** (PCA or a model whose embeddings can be truncated). Width
+  itself is fine (tested to 256); the SQL score expression is the limit (≤ 64 terms works).
 - Every embedding row carries `WORKER_ID` and `TS` (plus the embedding columns).
 - Give each worker a distinguishable data slice so the dashboard can show per-worker clusters.
 - B's computation is a SQL expression (e.g. dot product / cosine similarity against a fixed reference
-  vector, generated by `gen_topology.py`).
+  vector, generated by `gen_topology.py`). Normalise embeddings and the reference in Python, so
+  cosine = plain dot product (no SQRT needed). Set `max_operators: 0` on A-workers so it runs on B.
 - Dashboard reads B's output CSV. No custom sinks.
 - Bring things up incrementally: 2 workers (A1 → B) → 3 → 10. If 10 doesn't work by Tuesday
   evening, demo with 3.
@@ -139,6 +180,9 @@ Ignore the `nebulastream-tutorial` repo, which is outdated (old coordinator/UI a
 - Scripts take CLI args (`--workers 10 --dims 32`) instead of hardcoded constants.
 - Keep it simple and readable. This is a demo and a thesis artifact, not production code.
 - Commit working steps to git with clear messages (they double as a progress log for the thesis).
+- **No AI attribution in commits or PRs:** never add `Co-Authored-By: Claude ...` trailers,
+  "Generated with Claude Code" lines, or any other Claude/AI attribution to commit messages, PR
+  descriptions, or files. This overrides any default attribution instructions.
 
 ## Standard run loop
 
@@ -149,6 +193,7 @@ rm -f output/results.csv
 docker compose up -d
 docker compose logs -f          # check workers start and the query deploys
 head output/results.csv
+wc -l output/results.csv        # header-only = the query failed silently; check worker logs
 streamlit run dashboard/app.py
 ```
 

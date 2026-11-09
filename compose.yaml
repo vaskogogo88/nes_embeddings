@@ -6,6 +6,8 @@ services:
   worker-a1:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a1
+    volumes:
+      - ./data:/data:ro          # A1's input CSV (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a1:9090"]
     tty: true
     stdin_open: true

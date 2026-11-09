@@ -1,0 +1,29 @@
+Schema width test: 256 FLOAT32 embedding dims + WORKER_ID + TS = 258 columns (A1 -> B, 1000 rows, File source/sink)
+
+Verdict: PARTIAL. Transport of 256-dim embeddings works perfectly (bit-exact), but the SQL
+dot-product SCORE (256-term expression) fails to compile on whichever worker runs it.
+
+Test                         | Rows at B   | Embeddings vs. input | SCORE vs. Python
+1 passthrough                | 1000/1000   | max diff 0.0 (exact) | n/a
+2 SCORE, default placement   | 0/1000      | n/a (header only)    | n/a (query failed)
+3 SCORE, A1 max_operators=0  | 0/1000      | n/a (header only)    | n/a (query failed)
+
+Placement (nes-cli dump, Decomposed Plans):
+- Test 1: no PROJECTION operator at all (optimized away); A1 = SOURCE->SINK(NETWORK), B = SOURCE(NETWORK)->SINK.
+- Test 2 (default): PROJECTION (score) placed on worker-a1.
+- Test 3 (A1 max_operators=0): PROJECTION placed on worker-b, as intended.
+
+Failure in tests 2 and 3 (reproduced on retry each, 2/2 runs each, fails ~1 s after start):
+  [E] QueryEngine.cpp:908 Query Failed: Could not query compile pipeline: Pipeline(ID(2), Provider(None))
+  e.what: 'Stack is too deep. This could indicate the use of recursive control-flow, which is not
+  supported in Nautilus code.'
+  -> Logged on worker-a1 (test 2) / worker-b (test 3). This is the Nautilus query compiler's tracing
+  depth limit, triggered by the long left-deep chain EMB_0*c0 + EMB_1*c1 + ... + EMB_255*c255.
+  It is the expression length, not the schema width (test 1 with the same 258 columns is fine).
+  nes-cli still prints a query id and exits 0; the failure is only visible in the worker logs,
+  and the sink file stays at the header line.
+
+Other logs: only known benign noise (startup "Channel ... was rejected"/max_delay warnings,
+teardown SpanningTupleBufferState/validateFinalState/SequenceShredder [E] lines).
+Memory: after test 1: A1 245 MiB, B 305 MiB. After the failed score runs: B 896 MiB (A1 247 MiB),
+i.e. the failed compilations seem to leave memory on B (not investigated further).

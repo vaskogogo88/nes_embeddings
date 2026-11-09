@@ -1,0 +1,29 @@
+Schema width test: 128 FLOAT32 dims + WORKER_ID + TS = 130 columns (1000 rows, A1 -> B, compose project nesdim130)
+
+VERDICT: Transport works; computation does not. NebulaStream moves 130-column rows A1 -> B bit-exactly,
+but a 128-term SQL dot-product SCORE fails to compile ("Stack is too deep") on whichever worker runs it.
+
+Test                         | Rows at B  | Embeddings vs. input  | SCORE vs. Python
+1 passthrough                | 1000/1000  | exact (max diff 0.0)  | n/a
+2 SCORE, default placement   | 0/1000     | n/a (header only)     | n/a - query failed on A1 (2 of 2 runs)
+3 SCORE, A1 max_operators=0  | 0/1000     | n/a (header only)     | n/a - query failed on B  (2 of 2 runs)
+
+Placement (from `dump`): default -> PROJECTION (incl. SCORE) on worker-a1, B only has network source -> file sink.
+A1 max_operators=0 -> A1 only has source -> network sink; PROJECTION on worker-b. Placement works as intended.
+
+Error (deterministic, identical on A1 in test 2 and on B in test 3):
+  [E] QueryEngine.cpp:908 Query Failed: Could not query compile pipeline: Pipeline(ID(2), Provider(None))
+  e.what: 'Stack is too deep. This could indicate the use of recursive control-flow, which is not
+  supported in Nautilus code.'
+  The failing pipeline is Scan -> 131 nested MapPhysicalOperators (one per output field) -> Emit.
+  The 130-field passthrough projection (test 1) compiled fine, so the trigger is most likely the
+  128-term "EMB_0*r0 + EMB_1*r1 + ..." expression (a 128-deep nested expression tree) during
+  Nautilus tracing, possibly combined with the 131-deep map chain. Not separated further (scope).
+Side effects: the query is rejected only at pipeline-compile time on the worker, after `start` returned
+  a query id successfully - the CLI gives no error. The sink still creates results.csv with a header
+  (131 cols incl. SCORE) and 0 rows. In test 3, A1 then logs repeated "[W] exponential_backoff.rs:68
+  `max_delay` for strategy reached" while trying to send to B's dead query (~15 in a few seconds).
+Benign only: "Channel ... was rejected" at start; SpanningTupleBufferState/SequenceShredder teardown [E].
+Memory (docker stats, after tests 1-2): worker-a1 231 MiB, worker-b 240 MiB (of 7.75 GiB). No crashes.
+Implication: at 128 dims, compute SCORE outside the single giant expression (e.g. fewer dims, or
+  split the sum into partial-sum fields) - needs a follow-up test; keep v1 at 16-32 dims as planned.

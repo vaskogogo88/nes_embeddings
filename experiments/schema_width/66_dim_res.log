@@ -1,0 +1,23 @@
+Schema width test: 64 FLOAT32 embedding dims + WORKER_ID + TS = 66 columns (A1 -> B, 1000 rows)
+Date: 2026-11-09, local Mac (Docker Desktop, Apple Silicon), pinned nes-worker digest sha256:314e7861...
+
+VERDICT: Yes. NebulaStream handles 64-dim embeddings (66 columns) with no data loss and exact values.
+
+Test                              | Rows at B   | Embeddings vs. input  | SCORE vs. Python
+1 passthrough (66 cols)           | 1000/1000   | max err 0 (exact)     | n/a
+2 SQL dot-product SCORE, default  | 1000/1000   | max err 0 (exact)     | max err 5.3e-07
+3 SCORE forced onto B (max_ops=0) | 1000/1000   | max err 0 (exact)     | max err 5.3e-07
+(0 missing rows in all tests; output has 66 cols in test 1, 67 with SCORE in tests 2/3.)
+
+Placement:
+- Test 1: the plain-field projection is optimised away; A1 = SOURCE -> SINK(NETWORK), B = SOURCE(NETWORK) -> SINK.
+- Test 2 (default): the SCORE projection runs on worker-a1 (computed at the edge, then shipped to B).
+- Test 3 (A1 max_operators=0): the SCORE projection runs on worker-b, as intended.
+
+Errors/warnings: only the known benign ones, all on worker-a1 (35 lines over 3 runs):
+"Channel ... was rejected" warnings at startup, and teardown [E] lines
+(SpanningTupleBufferState validateFinalState for buffers 150/151, ~SequenceShredder) after end of stream.
+worker-b logged no [E]/[W] at all. No rejected queries, crashes or retries needed.
+
+Memory (docker stats, idle after test 1): worker-a1 212.7 MiB, worker-b 214.6 MiB (limit 7.75 GiB).
+Surprising: nothing. The SCORE error (~5e-7) is FLOAT32 rounding on the 64-term sum, as expected.
