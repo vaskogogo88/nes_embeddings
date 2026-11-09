@@ -1,0 +1,33 @@
+# 2-worker baseline: A1 -> B. Only worker-b mounts ./output, so any rows in
+# output/results.csv must have travelled over the network from worker-a1.
+# Images pinned by multi-arch digest (= nightly 'latest' of 2026-11-09, tested on M3 Pro).
+# Same digest resolves to arm64 on the Mac and x64 on the server.
+services:
+  worker-a1:
+    image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
+    hostname: worker-a1
+    command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a1:9090"]
+    tty: true
+    stdin_open: true
+
+  worker-b:
+    image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
+    hostname: worker-b
+    volumes:
+      - ./output:/output
+    command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-b:9090"]
+    tty: true
+    stdin_open: true
+
+  nes-cli:
+    image: nebulastream/nes-cli@sha256:9a0f08a2afb072118dae67846087e6a885e4876cfdc83a7509135fb2836b50eb
+    depends_on:
+      - worker-a1
+      - worker-b
+    volumes:
+      - .:/catalog:ro
+      - nes-cli-state:/state   # query-id -> worker mapping, needed for later `status`/`stop`
+    command: ["-t", "/catalog/compose-topology.yaml", "start"]
+
+volumes:
+  nes-cli-state:
