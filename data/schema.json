@@ -1,0 +1,221 @@
+{
+  "columns": [
+    {
+      "name": "WORKER_ID",
+      "type": "UINT64"
+    },
+    {
+      "name": "TS",
+      "type": "UINT64"
+    },
+    {
+      "name": "EMB_0",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_1",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_2",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_3",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_4",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_5",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_6",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_7",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_8",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_9",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_10",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_11",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_12",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_13",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_14",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_15",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_16",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_17",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_18",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_19",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_20",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_21",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_22",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_23",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_24",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_25",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_26",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_27",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_28",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_29",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_30",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_31",
+      "type": "FLOAT32"
+    }
+  ],
+  "dims": 32,
+  "reference_group": "sci.space",
+  "reference": [
+    0.0632,
+    0.009012,
+    -0.334412,
+    0.08722,
+    -0.214868,
+    -0.129699,
+    -0.071803,
+    -0.056084,
+    0.488126,
+    0.333765,
+    0.061713,
+    0.053871,
+    0.114914,
+    0.230737,
+    -0.008844,
+    0.034236,
+    0.290962,
+    0.405461,
+    -0.042319,
+    0.147568,
+    0.025504,
+    -0.023191,
+    0.082669,
+    -0.207816,
+    0.084012,
+    0.165486,
+    -0.031162,
+    -0.065111,
+    -0.042076,
+    0.01664,
+    0.073041,
+    0.10125
+  ],
+  "workers": {
+    "1": [
+      "alt.atheism",
+      "comp.graphics"
+    ],
+    "2": [
+      "comp.os.ms-windows.misc",
+      "comp.sys.ibm.pc.hardware"
+    ],
+    "3": [
+      "comp.sys.mac.hardware",
+      "comp.windows.x"
+    ],
+    "4": [
+      "misc.forsale",
+      "rec.autos"
+    ],
+    "5": [
+      "rec.motorcycles",
+      "rec.sport.baseball"
+    ],
+    "6": [
+      "rec.sport.hockey",
+      "sci.crypt"
+    ],
+    "7": [
+      "sci.electronics",
+      "sci.med"
+    ],
+    "8": [
+      "sci.space",
+      "soc.religion.christian"
+    ],
+    "9": [
+      "talk.politics.guns",
+      "talk.politics.mideast"
+    ],
+    "10": [
+      "talk.politics.misc",
+      "talk.religion.misc"
+    ]
+  },
+  "model": "sentence-transformers/all-MiniLM-L6-v2",
+  "pca_explained_variance": 0.3898,
+  "rows_per_worker": 200
+}
