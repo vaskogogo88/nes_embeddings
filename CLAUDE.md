@@ -30,8 +30,9 @@ Goal of the demo: show that (1) embeddings stay meaningful after travelling thro
   arrive in order. A1 mounts `./data:/data:ro`, only B mounts `./output`.
 - **Done:** schema width tests with random unit vectors, see `experiments/schema_width/*.log`.
   Transport works up to 256 dims; a single-expression SQL dot product only up to 64 (details below).
-- **Next:** `scripts/embed.py` (sentence-transformers, PCA → 32 dims; dataset not decided yet,
-  AG News proposed) and a File source on A1.
+- **Done (2026-11-10):** `embed.py` (20 Newsgroups, MiniLM, PCA → 32), `gen_topology.py`,
+  `check_results.py`. 2, 3 and 10 workers verified end to end (200/200 rows each, exact).
+- **Next:** Streamlit dashboard (`dashboard/app.py`), then deploy to the server.
 
 ## Target architecture (v1 demo)
 
@@ -193,7 +194,7 @@ rm -f output/results.csv
 docker compose up -d
 docker compose logs -f          # check workers start and the query deploys
 head output/results.csv
-wc -l output/results.csv        # header-only = the query failed silently; check worker logs
+python scripts/check_results.py # rows per worker, embeddings unchanged, SCORE vs Python (catches silent failures)
 streamlit run dashboard/app.py
 ```
 
