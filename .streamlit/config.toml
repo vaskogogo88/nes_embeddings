@@ -1,0 +1,9 @@
+# Only reachable from this machine. On the server, use an SSH tunnel
+# (ssh -L 8501:localhost:8501 <server>) instead of exposing the port.
+[server]
+address = "localhost"
+port = 8501
+headless = true
+
+[browser]
+gatherUsageStats = false
