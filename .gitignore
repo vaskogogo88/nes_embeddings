@@ -4,3 +4,7 @@ output/
 __pycache__/
 .DS_Store
 data/cache/
+
+# TPC kit: licence forbids redistribution, keep it out of git
+TPCx-IoT_Tools_*/
+data/iot/
