@@ -209,5 +209,6 @@
   "window_s": 60,
   "features": 160,
   "pca_explained_variance": 0.4139,
+  "pca_noise_baseline": 0.4146,
   "rows_per_worker": 35
 }

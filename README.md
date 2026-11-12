@@ -3,31 +3,35 @@
 Prototype for "LLMs in Hierarchical Aggregation Topologies": NebulaStream nodes exchange
 **embeddings instead of raw data**.
 
-In this first demo, 10 edge workers (A1–A10) each send sentence embeddings of their slice of the
-20 Newsgroups dataset to one sink worker (B). B computes a similarity score on the embeddings it
-receives, and a live dashboard shows that
+Edge workers (A1–A10) each send embeddings of their own data to one sink worker (B). B computes a
+similarity score on the embeddings it receives, and a live dashboard shows what arrived, how many
+bytes the embeddings saved, and whether they kept their meaning.
 
-1. the embeddings stay meaningful after travelling through the topology, and
-2. they need far fewer bytes than the raw text (8.4× fewer in the default run).
+The same pipeline runs on two datasets; only the data step differs:
+
+| Dataset | One embedding = | Result |
+|---|---|---|
+| **TPCx-IoT** (default) | one substation × one 60 s window of its 160 sensors | 350/350 windows delivered exactly; **182× fewer bytes** than the windows' content (4,284× vs. the generated, padded records). The generator's readings are uniform random, so the embeddings carry no meaning (see `reports/iot_report.pdf`). |
+| **20 Newsgroups** | one forum post (MiniLM sentence embedding) | 2,000/2,000 posts delivered exactly; **8.4× fewer bytes**; B's score recognises the reference topic (`reports/demo_report.pdf`). |
 
 ```
-20 Newsgroups ──> scripts/embed.py ──> data/worker_01.csv … worker_10.csv   (offline, Python)
-                                              │
-          worker-a1 … worker-a10   (NebulaStream, File source each, send downstream)
-                                              │
-          worker-b   (SQL: SCORE = cosine similarity to the sci.space centroid → output/results.csv)
-                                              │
-          dashboard/app.py   (Streamlit, reads output/results.csv, refreshes every 2 s)
+data (offline, Python) ──> data/<dataset>/worker_01.csv … worker_10.csv
+                                     │
+        worker-a1 … worker-a10   (NebulaStream, File source each, send downstream)
+                                     │
+        worker-b   (SQL: SCORE = cosine similarity to a reference vector → output/results.csv)
+                                     │
+        dashboard/app.py   (Streamlit, reads output/results.csv, refreshes every 2 s)
 ```
 
-Embeddings are 32-dim (MiniLM sentence embeddings reduced with PCA) and unit length, so B's
-dot product is a cosine similarity.
+Embeddings are 32-dim and unit length (PCA-reduced), so B's dot product is a cosine similarity.
+The edge workers have `max_operators: 0`, which makes NebulaStream compute the score on B.
 
 ## Requirements
 
 - Docker (Docker Desktop on macOS: give it ≥ 8 GB RAM). The NebulaStream images are pinned by digest
   in `compose.yaml` and run natively on Apple Silicon (arm64) and x86-64.
-- Python 3.11+ for the scripts and the dashboard.
+- Python 3.11+:
 
 ```bash
 python3 -m venv .venv
@@ -35,76 +39,93 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-To only run the pipeline and check its output, `pandas` and `numpy` are enough. The pre-generated
-data in `data/` is committed, so PyTorch / sentence-transformers are only needed to regenerate it.
+The generated embeddings for both datasets are committed (`data/iot_emb/`, `data/`), so running the
+demo needs neither the TPCx-IoT kit nor PyTorch.
 
-## Run the demo (10 workers, pre-generated data)
+## Run the demo (TPCx-IoT, the committed default)
 
 ```bash
 mkdir -p output && chmod a+rwX output    # the workers write as uid 10000
 docker compose down
 rm -f output/results.csv                 # avoid looking at stale results
 docker compose up -d                     # starts A1–A10 and B; nes-cli submits the query and exits 0
-python scripts/check_results.py          # rows per worker, embeddings unchanged, SCORE correct
-streamlit run dashboard/app.py           # open http://localhost:8501
+python scripts/check_results.py --data-dir data/iot_emb       # should end with OK, 35/35 per worker
+streamlit run dashboard/app.py -- --data-dir data/iot_emb     # open http://localhost:8501
 ```
 
-All 2000 rows arrive within a few seconds. `check_results.py` should end with `OK` and show
-`200/200 rows` for every worker.
-
-Stop everything with `docker compose down`.
-
-## Change the setup
-
-The pipeline is generated, never hand-edited:
+## Run the demo on 20 Newsgroups
 
 ```bash
-# 1. data: embeddings for N workers (downloads the dataset and model once, ~1 min on an M3)
-python scripts/embed.py --workers 10 --dims 32 --rows-per-worker 200
-
-# 2. config: compose.yaml + compose-topology.yaml for the first N workers of that data
-python scripts/gen_topology.py --workers 3
-
-# 3. run as above
+python scripts/gen_topology.py --data-dir data   # regenerate compose files for the Newsgroups data
+docker compose down && rm -f output/results.csv && docker compose up -d
+python scripts/check_results.py                  # should end with OK, 200/200 per worker
+streamlit run dashboard/app.py                   # default --data-dir is data
 ```
 
-Useful options:
+The dashboard, `check_results.py` and the reports must use the same data folder as the running
+pipeline. The dashboard shows an error, and the report scripts stop, if they do not match.
+
+## TPCx-IoT data from scratch
+
+The TPCx-IoT kit is **not in git** (its licence forbids redistribution). Put `TPCx-IoT_Tools_v2.1.2/`
+in the repository root (it is git-ignored); Java is required.
+
+```bash
+# 1. run the kit's generator (print mode, no database) and store its records in SQLite (~2 s, ~300 MB)
+python scripts/iot_to_sqlite.py --clients 10 --records-per-client 20000 --fresh   # -> data/iot/tpcx_iot.db
+
+# 2. one embedding per substation per window -> data/iot_emb/
+python scripts/embed_iot.py --window-s 60 --dims 32
+
+# 3. compose files for it, then run as above
+python scripts/gen_topology.py --data-dir data/iot_emb
+```
+
+What the generator produces (kit v2.1.2): keys `client:sensor:timestamp` (100 ms apart, one random
+sensor per record, 160 sensors), values of 1,000 characters that repeat a 4-decimal reading as filler.
+The readings are uniform random numbers: no differences between substations, sensors or time.
+
+## 20 Newsgroups data from scratch
+
+```bash
+python scripts/embed.py --workers 10 --dims 32 --rows-per-worker 200   # downloads dataset + model once
+python scripts/gen_topology.py --data-dir data
+```
+
+To use another text dataset, replace `load_dataset()` in `scripts/embed.py`.
+
+## Options
 
 | Script | Option | Meaning |
 |---|---|---|
-| `embed.py` | `--workers N` | number of edge workers (max 10 with 2 newsgroups each, 20 with `--groups-per-worker 1`) |
-| `embed.py` | `--dims D` | embedding size after PCA. **Keep ≤ 64** (see limits below) |
-| `embed.py` | `--rows-per-worker R` | rows each worker sends |
-| `embed.py` | `--reference-group G` | B scores similarity to this newsgroup (default `sci.space`) |
-| `embed.py` | `--groups g1,g2,…` | pick the newsgroups explicitly, e.g. so a 2-worker run includes `sci.space` |
-| `gen_topology.py` | `--workers N` | use the first N workers of the generated data |
+| `gen_topology.py` | `--data-dir D` | which embeddings to run (`data` or `data/iot_emb`) |
+| `gen_topology.py` | `--workers N` | use the first N workers of that data |
 | `gen_topology.py` | `--score-at-edge` | let NebulaStream compute the score on the edge workers instead of B |
+| `embed_iot.py` | `--window-s S` | window length per embedding |
+| `embed.py` / `embed_iot.py` | `--dims D` | embedding size after PCA. **Keep ≤ 64** (see limits below) |
+| `embed.py` | `--reference-group G` | B scores similarity to this newsgroup (default `sci.space`) |
+| `iot_to_sqlite.py` | `--clients`, `--records-per-client` | how much TPCx-IoT data to generate |
 
-To try another dataset, replace `load_dataset()` in `scripts/embed.py`. It is the only
-dataset-specific function and returns `(texts, labels)`.
+## Reports
 
-## Dashboard
+```bash
+python reports/make_report_iot.py   # -> reports/iot_report.pdf   (needs the TPCx-IoT run + data/iot/tpcx_iot.db)
+python reports/make_report.py       # -> reports/demo_report.pdf  (needs the Newsgroups run)
+cd reports && latexmk -pdf demo_report.tex   # LaTeX version of the Newsgroups report
+```
 
-`streamlit run dashboard/app.py` shows:
-
-- rows received at B, workers reporting, and bytes sent as embeddings vs. the same posts as raw text;
-- a 2D PCA projection of the embeddings B received, coloured by B's score (hover for the post);
-- B's mean score per newsgroup and the highest-scoring posts;
-- one small plot per worker (its cluster vs. everything else) and rows received per worker.
-
-It only listens on `localhost` (`.streamlit/config.toml`). On a remote server, use an SSH tunnel:
-`ssh -L 8501:localhost:8501 <server>`, then open http://localhost:8501 locally.
+Every number in the reports is computed from `output/results.csv` and the data folder.
 
 ## Troubleshooting
 
 | Symptom | Cause / fix |
 |---|---|
 | `results.csv` has a header but no rows | The query failed on a worker. NebulaStream fails **silently**: `nes-cli` still prints a query id. Check `docker compose logs worker-b` for `Query Failed`. |
+| Dashboard: "the running pipeline was generated from a different data folder" | Start it with the `--data-dir` that `gen_topology.py` used. |
 | `nes-cli` cannot connect | Workers weren't ready yet. Rerun `docker compose run --rm nes-cli`. |
 | `Channel ... was rejected`, `max_delay ... reached` warnings at startup | Harmless race while workers start. |
 | `[E] ... validateFinalState` / `~SequenceShredder` after a run | Harmless teardown messages; the data is complete. |
 | `Port 8501 is not available` | Another Streamlit is running. Stop it, or use `--server.port 8502`. |
-| Old results on the dashboard | Delete `output/results.csv` before each run. |
 
 Query status / stop (the query id is printed by `docker compose logs nes-cli`):
 
@@ -118,18 +139,26 @@ docker compose run --rm nes-cli -t /catalog/compose-topology.yaml stop <query-id
 - Embeddings of 32, 64, 128 and 256 dims all travel A → B bit-exactly.
 - The SQL score is one long expression. It compiles up to **64** terms but fails at 128+
   (`Stack is too deep`). Details: `experiments/schema_width/`.
-- Operators are placed as close to the source as possible. `gen_topology.py` sets
-  `max_operators: 0` on the edge workers so the score is computed on B.
+- Operators are placed as close to the source as possible; `max_operators: 0` on the edge workers
+  moves the score to B.
+- One query per worker (each scoring against its own centroid on B) works for 10 concurrent queries:
+  `experiments/multi_query/`.
 
 ## Repository layout
 
 ```
 compose.yaml, compose-topology.yaml   generated by scripts/gen_topology.py
-scripts/embed.py                      dataset -> embeddings -> data/
-scripts/gen_topology.py               data/schema.json -> compose files
+scripts/iot_to_sqlite.py              TPCx-IoT generator -> data/iot/tpcx_iot.db
+scripts/embed_iot.py                  TPCx-IoT windows -> data/iot_emb/
+scripts/embed.py                      20 Newsgroups -> data/
+scripts/gen_topology.py               <data-dir>/schema.json -> compose files
 scripts/check_results.py              verify B's output against what the workers sent
-dashboard/app.py                      Streamlit dashboard
-data/                                 generated data (committed); data/cache/ is ignored
-experiments/schema_width/             schema-width test results (66/130/258 columns)
+dashboard/app.py                      Streamlit dashboard (--data-dir)
+reports/                              report scripts, PDFs, LaTeX version, figures
+data/                                 Newsgroups embeddings (committed); data/cache/ ignored
+data/iot_emb/                         TPCx-IoT embeddings (committed)
+data/iot/                             TPCx-IoT records in SQLite (ignored, regenerate)
+experiments/                          schema-width and multi-query test logs
 output/                               B's output (ignored)
+TPCx-IoT_Tools_v2.1.2/                TPC kit (ignored, licence)
 ```

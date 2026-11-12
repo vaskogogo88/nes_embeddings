@@ -43,6 +43,8 @@ res = pd.read_csv(ROOT / "output/results.csv")
 res.columns = [c.split(":")[0] for c in res.columns]
 meta = pd.read_csv(ROOT / "data/meta.csv")
 df = res.merge(meta, on=["WORKER_ID", "TS"], how="left")
+if len(res.columns) - 3 != len(emb_cols) or df.GROUP.isna().any():
+    raise SystemExit("output/results.csv is not from the 20 Newsgroups run: run the pipeline on data/ first")
 
 # delivery check: B's output vs what each worker sent (same logic as scripts/check_results.py)
 ref = np.array(schema["reference"])
@@ -170,7 +172,7 @@ story += [Paragraph("2. Did everything arrive?", h2),
 story += [
     Paragraph("3. What B received, coloured by its score", h2),
     Image(str(fig1), width=16.0 * cm, height=16.0 * cm * 4.3 / 7.0 * 0.93),
-    Paragraph(f"<b>Figure 1.</b> Every point is one of the {len(df):,} rows B received. The {dims}-dimensional "
+    Paragraph(f"<font name='Helvetica-Bold'>Figure 1.</font> Every point is one of the {len(df):,} rows B received. The {dims}-dimensional "
               f"embeddings are projected to two dimensions with PCA (the axes have no units; only distances "
               f"matter). Colour is the SCORE that B computed in NebulaStream. Outlined points are the "
               f"<i>{ref_group}</i> posts; this label comes from the dataset and was never sent to B.", cap),
@@ -178,7 +180,7 @@ story += [
         f"The darkest points, i.e. the rows B scored as most similar to <i>{ref_group}</i>, are not scattered "
         f"randomly: they are concentrated in one part of the plot, and the outlines show that they are mostly the "
         f"<i>{ref_group}</i> posts sent by worker A8. "
-        f"The {ref_group} rows average a score of <b>{by_group[ref_group]:+.2f}</b>, while the next-highest of the "
+        f"The {ref_group} rows average a score of <font name='Helvetica-Bold'>{by_group[ref_group]:+.2f}</font>, while the next-highest of the "
         f"other 19 newsgroups averages only {next_best:+.2f}. Of the {n_ref} {ref_group} rows, {ref_in_top} are among "
         f"the 200 highest-scoring rows (top 10 %). B never saw any text, only {dims} numbers per post, yet its "
         f"computation recognises the topic. The embeddings therefore kept their meaning after travelling from "
@@ -186,7 +188,7 @@ story += [
 
     Paragraph("4. Each node's data stays recognisable", h2),
     Image(str(fig2), width=16.5 * cm, height=16.5 * cm * 3.4 / 7.2 * 0.97),
-    Paragraph("<b>Figure 2.</b> The same projection as Figure 1, drawn once per edge worker: that worker's rows "
+    Paragraph("<font name='Helvetica-Bold'>Figure 2.</font> The same projection as Figure 1, drawn once per edge worker: that worker's rows "
               "in blue, all other rows in grey. Titles give the worker, the number of its rows that reached B, "
               "and its two newsgroups.", cap),
     Paragraph(
@@ -206,7 +208,7 @@ story += [
         f"is meaningful (Figure 1: topic recognised by similarity; Figure 2: each node's data keeps its own "
         f"structure). Sending embeddings instead of the raw posts needed {raw_kb / emb_kb:.1f}× fewer bytes.", body),
     Paragraph(
-        "<b>Limits of this first version.</b> Embeddings were computed offline, not on the edge nodes, so the cost "
+        "<font name='Helvetica-Bold'>Limits of this first version.</font> Embeddings were computed offline, not on the edge nodes, so the cost "
         "of computing them at the edge is not yet included. The byte comparison uses uncompressed text and "
         "payload bytes, not NebulaStream's wire format. A single SQL dot product compiles only up to 64 dimensions "
         "in this NebulaStream build (embeddings themselves travel fine up to 256). There is no aggregation yet; "

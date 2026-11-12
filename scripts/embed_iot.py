@@ -86,6 +86,9 @@ def main():
     emb = unit_rows(pca.transform(Z)).astype(np.float32)
     explained = float(pca.explained_variance_ratio_.sum())
     reference = unit_rows(emb.mean(axis=0, keepdims=True))[0]
+    # baseline: the same PCA on pure Gaussian noise of the same shape (n windows x n sensors)
+    noise = np.random.default_rng(a.seed).standard_normal(Z.shape)
+    noise_explained = float(PCA(n_components=a.dims, random_state=a.seed).fit(noise).explained_variance_ratio_.sum())
 
     emb_cols = [f"EMB_{i}" for i in range(a.dims)]
     windows["WORKER_ID"] = windows.client.map({c: i + 1 for i, c in enumerate(clients)})
@@ -117,6 +120,7 @@ def main():
         "window_s": a.window_s,
         "features": len(sensors),
         "pca_explained_variance": round(explained, 4),
+        "pca_noise_baseline": round(noise_explained, 4),
         "rows_per_worker": per_client,
     }
     (out / "schema.json").write_text(json.dumps(schema, indent=2))
@@ -126,9 +130,6 @@ def main():
     print(f"{len(df):,} records, {len(clients)} clients, {len(sensors)} sensors -> {n} windows of {a.window_s}s "
           f"({per_client} per worker, median {int(windows.n_records.median())} records/window, "
           f"median {int(windows.sensors_seen.median())}/{len(sensors)} sensors seen)")
-    # baseline: the same PCA on pure Gaussian noise of the same shape (n windows x n sensors)
-    noise = np.random.default_rng(a.seed).standard_normal(Z.shape)
-    noise_explained = PCA(n_components=a.dims, random_state=a.seed).fit(noise).explained_variance_ratio_.sum()
     print(f"PCA {len(sensors)} -> {a.dims} dims keeps {explained:.1%} of the variance "
           f"(pure noise of the same shape: {noise_explained:.1%})")
     print(f"bytes: embeddings {n * row_bytes / 1024:,.0f} KB | raw records as generated "
