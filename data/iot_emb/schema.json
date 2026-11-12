@@ -1,0 +1,213 @@
+{
+  "columns": [
+    {
+      "name": "WORKER_ID",
+      "type": "UINT64"
+    },
+    {
+      "name": "TS",
+      "type": "UINT64"
+    },
+    {
+      "name": "EMB_0",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_1",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_2",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_3",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_4",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_5",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_6",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_7",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_8",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_9",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_10",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_11",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_12",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_13",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_14",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_15",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_16",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_17",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_18",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_19",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_20",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_21",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_22",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_23",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_24",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_25",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_26",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_27",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_28",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_29",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_30",
+      "type": "FLOAT32"
+    },
+    {
+      "name": "EMB_31",
+      "type": "FLOAT32"
+    }
+  ],
+  "dims": 32,
+  "dataset": "TPCx-IoT",
+  "reference_group": "all-windows centroid",
+  "reference": [
+    0.168633,
+    -0.119739,
+    0.348582,
+    0.18499,
+    -0.418308,
+    0.152929,
+    -0.072174,
+    -0.205836,
+    0.139815,
+    -0.072927,
+    -0.003911,
+    -0.011798,
+    -0.176807,
+    -0.056845,
+    0.005481,
+    0.066531,
+    -0.155853,
+    0.123486,
+    -0.006,
+    0.140992,
+    -0.020607,
+    0.042947,
+    -0.310814,
+    -0.338902,
+    0.11506,
+    -0.192728,
+    0.132561,
+    0.159069,
+    -0.164617,
+    0.035719,
+    -0.210543,
+    -0.228988
+  ],
+  "workers": {
+    "1": [
+      "client1"
+    ],
+    "2": [
+      "client2"
+    ],
+    "3": [
+      "client3"
+    ],
+    "4": [
+      "client4"
+    ],
+    "5": [
+      "client5"
+    ],
+    "6": [
+      "client6"
+    ],
+    "7": [
+      "client7"
+    ],
+    "8": [
+      "client8"
+    ],
+    "9": [
+      "client9"
+    ],
+    "10": [
+      "client10"
+    ]
+  },
+  "window_s": 60,
+  "features": 160,
+  "pca_explained_variance": 0.4139,
+  "rows_per_worker": 35
+}

@@ -6,7 +6,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a1
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a1:9090"]
     tty: true
     stdin_open: true
@@ -15,7 +15,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a2
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a2:9090"]
     tty: true
     stdin_open: true
@@ -24,7 +24,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a3
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a3:9090"]
     tty: true
     stdin_open: true
@@ -33,7 +33,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a4
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a4:9090"]
     tty: true
     stdin_open: true
@@ -42,7 +42,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a5
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a5:9090"]
     tty: true
     stdin_open: true
@@ -51,7 +51,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a6
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a6:9090"]
     tty: true
     stdin_open: true
@@ -60,7 +60,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a7
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a7:9090"]
     tty: true
     stdin_open: true
@@ -69,7 +69,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a8
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a8:9090"]
     tty: true
     stdin_open: true
@@ -78,7 +78,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a9
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a9:9090"]
     tty: true
     stdin_open: true
@@ -87,7 +87,7 @@ services:
     image: nebulastream/nes-worker@sha256:314e78619f10065f58f7d2b942f0b4fa80895abf45479f5568048497abe7c61c
     hostname: worker-a10
     volumes:
-      - ./data:/data:ro    # input CSVs (read-only)
+      - ./data/iot_emb:/data:ro    # input CSVs (read-only)
     command: ["--", "--grpc=0.0.0.0:8080", "--data_address=worker-a10:9090"]
     tty: true
     stdin_open: true
